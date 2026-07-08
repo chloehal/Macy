@@ -24,4 +24,20 @@ describe('session tokens', () => {
   it('rejects a malformed token', () => {
     expect(verifySessionToken('not-a-real-token', SECRET, 1_000_000)).toBe(false);
   });
+
+  it('rejects an empty token', () => {
+    expect(verifySessionToken('', SECRET, 1_000_000)).toBe(false);
+  });
+
+  it('rejects a token that is only a separator', () => {
+    expect(verifySessionToken('.', SECRET, 1_000_000)).toBe(false);
+  });
+
+  it('rejects a token with an empty signature part', () => {
+    expect(verifySessionToken('123.', SECRET, 1_000_000)).toBe(false);
+  });
+
+  it('rejects a token with an empty expiry part', () => {
+    expect(verifySessionToken('.abc', SECRET, 1_000_000)).toBe(false);
+  });
 });

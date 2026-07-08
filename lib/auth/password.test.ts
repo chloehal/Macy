@@ -20,4 +20,12 @@ describe('password hashing', () => {
     expect(verifyPassword('same password', a)).toBe(true);
     expect(verifyPassword('same password', b)).toBe(true);
   });
+
+  it('returns false for a malformed stored hash (missing separator)', () => {
+    expect(verifyPassword('any password', 'not-a-valid-stored-hash')).toBe(false);
+  });
+
+  it('returns false for an empty stored hash', () => {
+    expect(verifyPassword('any password', '')).toBe(false);
+  });
 });
