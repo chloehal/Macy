@@ -1,5 +1,18 @@
 # Macy — Fondations + Saisie (`/today`) Implementation Plan
 
+> **⚠️ SUPERSEDED — do not execute this plan.** It was replaced on 2026-08-05 by
+> [`2026-08-05-macy-mvp.md`](./2026-08-05-macy-mvp.md), which ships the same core
+> screen in 6 tasks instead of 16. This document is kept as the design reference for
+> what comes *after* the MVP: couche 2 (saignement), couche 3 (the 14 optional
+> metrics), the `/settings` page, smart pre-fill, the catch-up banner, and the PWA
+> shell. Reuse its component code and copy — but note it contains at least one
+> unverified API detail: `createInsertSchema` is imported from `drizzle-orm/zod`,
+> while the package that exports it is `drizzle-zod`.
+>
+> **Tasks 1, 2, 4, 8, 9 and 14 of this plan were already implemented** on branch
+> `worktree-macy-foundations-saisie` (worktree at `.claude/worktrees/macy-foundations-saisie`),
+> 14 commits, 29 tests passing. Only the database-dependent tasks were never started.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the Macy personal cycle-tracking app's foundations (Next.js + MySQL on Hostinger + password-gated access) and ship the `/today` entry screen — the single highest-priority deliverable per the product spec, since adherence to daily logging is the project's #1 success criterion.
