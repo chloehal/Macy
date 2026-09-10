@@ -1,11 +1,14 @@
+import { localAccessEnabled } from "@/lib/auth/local-access";
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth/session";
 import { entryStore } from "@/lib/entries/store";
 import { parseEntry, validDate } from "@/lib/entries/model";
-import { calcPackDay } from "@/lib/cycle/pack-day";
+import { getSettings } from "@/lib/tracking/store";
+import { cycleFor } from "@/lib/tracking/analysis";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 function authorized(request: NextRequest) {
+  if (localAccessEnabled()) return true;
   const secret = process.env.SESSION_SECRET;
   const token = request.cookies.get("macy_session")?.value;
   return !!secret && !!token && verifySessionToken(token, secret);
@@ -23,24 +26,17 @@ export async function GET(request: NextRequest) {
   if (!validDate(date)) return json({ error: "Date invalide." }, 400);
   try {
     const history = await entryStore().list();
-    let cycle: string | null = null;
-    const start = process.env.DATE_DEBUT_PLAQUETTE;
-    const active = Number(process.env.PILULES_ACTIVES),
-      rest = Number(process.env.JOURS_ARRET);
-    if (
-      validDate(start) &&
-      Number.isInteger(active) &&
-      active > 0 &&
-      Number.isInteger(rest) &&
-      rest >= 0
-    ) {
-      const day = calcPackDay(date, start, active, rest);
-      cycle = `Jour ${day} · ${day <= active ? "plaquette" : "pause"}`;
-    }
+    const settings = await getSettings();
+    const position = cycleFor(date, settings, history);
+    const cycle = position
+      ? `${position.regimen.name} · Jour ${position.day} · ${position.phase === "active" ? "prise active" : "pause"}`
+      : null;
     return json({
       entry: history.find((p) => p.date === date) || null,
       history: history.slice(0, 30),
+      localAccess: localAccessEnabled(),
       cycle,
+      settings,
     });
   } catch {
     return json(
@@ -77,7 +73,16 @@ export async function PUT(request: NextRequest) {
     );
   }
   try {
-    return json({ entry: await entryStore().save(entry) });
+    const settings = await getSettings();
+    const previous = await entryStore().list();
+    const position = cycleFor(entry.date, settings, [
+      ...previous.filter((e) => e.date !== entry.date),
+      entry,
+    ]);
+    const cycle = position
+      ? `${position.regimen.name} · Jour ${position.day} · ${position.phase === "active" ? "prise active" : "pause"}`
+      : null;
+    return json({ entry: await entryStore().save(entry), cycle });
   } catch {
     return json(
       { error: "Enregistrement impossible. Réessaie sans fermer cette page." },

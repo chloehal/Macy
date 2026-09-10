@@ -4,8 +4,20 @@ import { NextRequest } from "next/server";
 import { GET, PUT } from "./route";
 import { createSessionToken } from "@/lib/auth/session";
 import { blankEntry } from "@/lib/entries/model";
-const { list, save } = vi.hoisted(() => ({ list: vi.fn(), save: vi.fn() }));
+const { list, save } = vi.hoisted(() => ({
+  list: vi.fn().mockResolvedValue([]),
+  save: vi.fn(),
+}));
 vi.mock("@/lib/entries/store", () => ({ entryStore: () => ({ list, save }) }));
+vi.mock("@/lib/tracking/store", () => ({
+  getSettings: async () => ({
+    regimens: [],
+    sleepHours: 7,
+    stressThreshold: 4,
+    effortThreshold: 4,
+    enabled: [],
+  }),
+}));
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.clearAllMocks();

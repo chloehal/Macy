@@ -3,16 +3,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TrackingNav } from "@/components/tracking/nav";
+import { EntryDetails } from "@/components/tracking/details";
+import type { Settings } from "@/lib/tracking/model";
 import { Slider } from "@/components/ui/slider";
 import {
   blankEntry,
   metrics,
   todayDate,
   type Entry,
+  validDate,
 } from "@/lib/entries/model";
 
 export function Today() {
   const router = useRouter();
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search).get("date");
+    if (validDate(query) && query <= todayDate()) setDate(query);
+  }, []);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [localAccess, setLocalAccess] = useState(false);
   const [date, setDate] = useState(todayDate);
   const [entry, setEntry] = useState<Entry>(() => blankEntry(todayDate()));
   const [history, setHistory] = useState<Entry[]>([]);
@@ -47,6 +57,8 @@ export function Today() {
           setEntry(data.entry || blankEntry(date));
           setHistory(data.history);
           setCycle(data.cycle);
+          setSettings(data.settings);
+          setLocalAccess(data.localAccess === true);
           setDirty(false);
           setLoaded(true);
         }
@@ -69,8 +81,22 @@ export function Today() {
         e.returnValue = "";
       }
     };
+    const navigate = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest("a");
+      if (
+        dirty &&
+        link &&
+        link.href !== location.href &&
+        !window.confirm("Quitter cette page sans enregistrer ?")
+      )
+        e.preventDefault();
+    };
+    document.addEventListener("click", navigate);
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      document.removeEventListener("click", navigate);
+    };
   }, [dirty]);
   function change(patch: Partial<Entry>) {
     setEntry((old) => ({ ...old, ...patch }));
@@ -102,6 +128,7 @@ export function Today() {
       const data = await response.json();
       if (!response.ok)
         throw new Error(data.error || "Enregistrement impossible.");
+      setCycle(data.cycle);
       setSaved(true);
       setDirty(false);
       setHistory((old) =>
@@ -134,10 +161,13 @@ export function Today() {
         <a href="/today" className="text-xl font-semibold tracking-tight">
           macy<span className="text-muted-foreground">.</span>
         </a>
-        <Button variant="ghost" onClick={logout} disabled={saving}>
-          Se déconnecter
-        </Button>
+        {!localAccess && (
+          <Button variant="ghost" onClick={logout} disabled={saving}>
+            Se déconnecter
+          </Button>
+        )}
       </header>
+      <TrackingNav />
       <div className="mb-8">
         <p className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Mon carnet quotidien
@@ -181,13 +211,13 @@ export function Today() {
                       {metric.label}
                     </label>
                     <span className="font-mono text-sm tabular-nums">
-                      {entry[metric.key]}{" "}
+                      {entry[metric.key] ?? "—"}{" "}
                       <span className="text-muted-foreground">/ 5</span>
                     </span>
                   </div>
                   <Slider
                     aria-labelledby={metric.key}
-                    value={[entry[metric.key]]}
+                    value={[entry[metric.key] ?? 3]}
                     min={1}
                     max={5}
                     step={1}
@@ -198,6 +228,22 @@ export function Today() {
                       })
                     }
                   />
+                  <div className="mt-3 flex gap-3 text-xs">
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => change({ [metric.key]: 3 })}
+                    >
+                      Noter 3
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted-foreground underline"
+                      onClick={() => change({ [metric.key]: null })}
+                    >
+                      Non renseigné
+                    </button>
+                  </div>
                   <div className="mt-3 flex justify-between text-xs text-muted-foreground">
                     <span>1 · {metric.low}</span>
                     <span>5 · {metric.high}</span>
@@ -207,13 +253,21 @@ export function Today() {
             </div>
             <div>
               <label className="flex min-h-11 cursor-pointer items-center gap-3">
-                <input
-                  className="size-5 accent-black"
-                  type="checkbox"
-                  checked={entry.crise}
-                  onChange={(e) => change({ crise: e.target.checked })}
-                />
                 <span>Une crise aujourd’hui</span>
+                <select
+                  className="min-h-11 border bg-background px-2"
+                  value={entry.crise === null ? "" : entry.crise ? "yes" : "no"}
+                  onChange={(e) =>
+                    change({
+                      crise:
+                        e.target.value === "" ? null : e.target.value === "yes",
+                    })
+                  }
+                >
+                  <option value="">Non renseigné</option>
+                  <option value="no">Non</option>
+                  <option value="yes">Oui</option>
+                </select>
               </label>
               {entry.crise && (
                 <label className="mt-3 block text-sm">
@@ -227,6 +281,7 @@ export function Today() {
                 </label>
               )}
             </div>
+            <EntryDetails entry={entry} settings={settings} onChange={change} />
             <label className="block text-sm">
               Une note pour cette journée{" "}
               <span className="text-muted-foreground">· facultatif</span>

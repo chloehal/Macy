@@ -1,8 +1,13 @@
-// middleware.ts
+import { localAccessEnabled } from "@/lib/auth/local-access";
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth/session";
 
 export function middleware(request: NextRequest) {
+  if (localAccessEnabled()) {
+    if (request.nextUrl.pathname === "/login")
+      return NextResponse.redirect(new URL("/today", request.url));
+    return NextResponse.next();
+  }
   const isPublicPath =
     request.nextUrl.pathname === "/login" ||
     request.nextUrl.pathname === "/api/auth/login";

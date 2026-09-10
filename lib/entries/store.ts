@@ -25,6 +25,23 @@ export class LocalEntryStore {
     const operation = this.writes.then(async () => {
       await mkdir(this.directory, { recursive: true, mode: 0o700 });
       const entries = await this.list();
+      // Preserve the original on-disk carnet before the first extended-format save.
+      try {
+        const previous = await readFile(join(this.directory, "entries.json"));
+        await writeFile(
+          join(this.directory, "entries-before-detailed-tracking.json"),
+          previous,
+          { flag: "wx", mode: 0o600 },
+        );
+      } catch (error) {
+        if (
+          !["ENOENT", "EEXIST"].includes(
+            (error as NodeJS.ErrnoException).code || "",
+          )
+        )
+          throw error;
+      }
+
       const next = [
         entry,
         ...entries.filter((item) => item.date !== entry.date),
