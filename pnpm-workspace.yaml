@@ -1,0 +1,4 @@
+# sharp arrive comme dépendance optionnelle de Next (optimisation d'images).
+# pnpm 11 exige une décision explicite sur les scripts de build : on l'autorise.
+allowBuilds:
+  sharp: true
