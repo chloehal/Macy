@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local private daily entries
+.macy-data/
+
+# Local QA screenshots
+artifacts/

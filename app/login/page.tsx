@@ -1,15 +1,15 @@
 // app/login/page.tsx
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -18,16 +18,19 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(false);
 
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ password }),
-    });
-
-    if (response.ok) {
-      router.push('/today');
-      router.refresh();
-    } else {
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (response.ok) {
+        router.push("/today");
+        router.refresh();
+      } else setError(true);
+    } catch {
       setError(true);
+    } finally {
       setSubmitting(false);
     }
   }
@@ -35,6 +38,12 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
+        <div className="mb-8">
+          <p className="text-3xl font-semibold tracking-tight">macy.</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Ton carnet quotidien, à ton rythme.
+          </p>
+        </div>
         <Label htmlFor="password">Mot de passe</Label>
         <Input
           id="password"
@@ -43,7 +52,11 @@ export default function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           autoFocus
         />
-        {error && <p className="text-sm text-muted-foreground">Mot de passe incorrect.</p>}
+        {error && (
+          <p className="text-sm text-muted-foreground">
+            Connexion impossible. Vérifie ton mot de passe et réessaie.
+          </p>
+        )}
         <Button type="submit" disabled={submitting} className="w-full">
           Entrer
         </Button>
